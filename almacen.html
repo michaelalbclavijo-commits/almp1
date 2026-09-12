@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALMACÉN·CTL — Control de Inventario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#EAE7DF;
+    --bg-panel:#F6F4EF;
+    --bg-side:#21242A;
+    --ink:#21242A;
+    --ink-soft:#63666D;
+    --ink-inverse:#F3F1EA;
+    --accent:#E3A63A;
+    --accent-deep:#B9832A;
+    --steel:#3C6E91;
+    --steel-soft:#DCE7EE;
+    --danger:#B5432E;
+    --danger-soft:#F3DDD6;
+    --success:#5B7A52;
+    --success-soft:#DFE8DA;
+    --line:#D3CEC1;
+    --line-dark:#3A3E46;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    font-size:14px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Big Shoulders Display',system-ui,sans-serif;
+    font-weight:700;
+    letter-spacing:0.01em;
+    margin:0;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;font-size:14px;}
+  a{color:inherit;}
+  #root{min-height:100vh;}
+
+  /* ---------- LOGIN ---------- */
+  .login-wrap{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      linear-gradient(180deg, rgba(33,36,42,0.94), rgba(33,36,42,0.94)),
+      repeating-linear-gradient(135deg, #2a2e35 0px, #2a2e35 2px, #24272d 2px, #24272d 14px);
+    padding:24px;
+  }
+  .login-card{
+    width:100%;
+    max-width:460px;
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    padding:36px 34px 30px;
+  }
+  .login-eyebrow{
+    color:var(--accent-deep);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    margin-bottom:6px;
+  }
+  .login-card h1{font-size:34px;line-height:1.05;margin-bottom:4px;}
+  .login-sub{color:var(--ink-soft);font-size:13px;margin-bottom:26px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:6px;}
+  .field input, .field select, .field textarea{
+    width:100%;
+    padding:10px 11px;
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:var(--radius);
+    color:var(--ink);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:2px solid var(--steel);
+    outline-offset:1px;
+    border-color:var(--steel);
+  }
+  .role-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:22px;}
+  .role-opt{
+    border:1px solid var(--line);
+    background:#fff;
+    padding:12px 8px;
+    text-align:left;
+    border-radius:var(--radius);
+  }
+  .role-opt strong{display:block;font-size:12.5px;margin-bottom:3px;}
+  .role-opt span{display:block;font-size:11px;color:var(--ink-soft);line-height:1.35;}
+  .role-opt.active{border-color:var(--steel);background:var(--steel-soft);}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:var(--ink-inverse);
+    padding:10px 18px;
+    border-radius:var(--radius);
+    font-size:13.5px;
+    font-weight:600;
+  }
+  .btn.primary{background:var(--accent);border-color:var(--accent-deep);color:#2a2109;}
+  .btn.ghost{background:transparent;color:var(--ink);}
+  .btn.danger{background:var(--danger);border-color:#8f3423;color:#fff;}
+  .btn.steel{background:var(--steel);border-color:#2c5674;color:#fff;}
+  .btn:disabled{opacity:0.45;cursor:not-allowed;}
+  .btn-full{width:100%;}
+  .error-msg{color:var(--danger);font-size:12.5px;margin:-8px 0 14px;}
+
+  /* ---------- APP SHELL ---------- */
+  .shell{display:flex;min-height:100vh;}
+  .sidebar{
+    width:224px;flex-shrink:0;
+    background:var(--bg-side);
+    color:var(--ink-inverse);
+    display:flex;flex-direction:column;
+    padding:22px 0 16px;
+  }
+  .brand{padding:0 20px 20px;border-bottom:1px solid var(--line-dark);margin-bottom:6px;}
+  .brand .display{font-size:22px;color:#fff;}
+  .brand .display span{color:var(--accent);}
+  .brand-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.12em;color:#8b8f97;margin-top:3px;}
+  .nav{flex:1;padding:14px 0;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 20px;
+    color:#C7C9CE;
+    font-size:13.5px;
+    border-left:3px solid transparent;
+    background:none;border-top:none;border-right:none;border-bottom:none;
+    width:100%;text-align:left;
+  }
+  .nav-item .dot{width:6px;height:6px;flex-shrink:0;background:currentColor;border-radius:50%;opacity:0.5;}
+  .nav-item:hover{color:#fff;background:rgba(255,255,255,0.04);}
+  .nav-item.active{
+    color:#fff;background:rgba(227,166,58,0.12);
+    border-left-color:var(--accent);
+    font-weight:600;
+  }
+  .nav-item.active .dot{opacity:1;background:var(--accent);}
+  .side-foot{padding:14px 20px 0;border-top:1px solid var(--line-dark);}
+  .side-user{font-size:13px;color:#fff;font-weight:600;}
+  .side-role{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--accent);letter-spacing:0.06em;margin-top:2px;}
+  .side-logout{margin-top:12px;font-size:12px;color:#9498A0;background:none;border:1px solid var(--line-dark);padding:7px 10px;border-radius:var(--radius);width:100%;}
+  .side-logout:hover{color:#fff;border-color:#5a5f68;}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .topbar{
+    padding:22px 32px 18px;
+    border-bottom:1px solid var(--line);
+    display:flex;align-items:flex-end;justify-content:space-between;
+    gap:16px;flex-wrap:wrap;
+  }
+  .topbar h2{font-size:26px;}
+  .topbar .sub{color:var(--ink-soft);font-size:13px;margin-top:3px;}
+  .content{padding:26px 32px 60px;flex:1;}
+
+  /* ---------- COMMON WIDGETS ---------- */
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px;}
+  .stat-card{background:var(--bg-panel);border:1px solid var(--line);padding:16px 18px;}
+  .stat-card .num{font-family:'Big Shoulders Display';font-size:32px;font-weight:700;line-height:1;}
+  .stat-card .lbl{color:var(--ink-soft);font-size:11.5px;margin-top:6px;letter-spacing:0.02em;}
+  .stat-card.warn .num{color:var(--danger);}
+
+  .panel{background:var(--bg-panel);border:1px solid var(--line);margin-bottom:22px;}
+  .panel-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .panel-head h3{font-size:18px;}
+  .panel-body{padding:0;}
+  .toolbar{padding:14px 18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line);}
+  .toolbar input[type=text]{flex:1;min-width:180px;padding:9px 11px;border:1px solid var(--line);border-radius:var(--radius);}
+  .toolbar select{padding:9px 11px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;}
+  .toolbar-actions{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;}
+  .help-text{color:var(--ink-soft);font-size:12px;margin-top:4px;}
+  .import-summary{background:var(--steel-soft);border:1px solid var(--steel);color:var(--steel);padding:10px 12px;font-size:12.5px;margin:0 18px 14px;border-radius:var(--radius);}
+
+  table{width:100%;border-collapse:collapse;}
+  th{
+    text-align:left;font-size:11px;color:var(--ink-soft);
+    letter-spacing:0.04em;text-transform:uppercase;
+    padding:10px 16px;border-bottom:1px solid var(--line);
+    background:#EFEDE6;
+  }
+  td{padding:11px 16px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:rgba(60,110,145,0.045);}
+  .loc-tag{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--steel);background:var(--steel-soft);padding:3px 7px;border-radius:2px;white-space:nowrap;}
+  .badge{display:inline-block;font-size:10.5px;font-family:'IBM Plex Mono',monospace;padding:2px 7px;border-radius:2px;letter-spacing:0.03em;}
+  .badge.low{background:var(--danger-soft);color:var(--danger);}
+  .badge.ok{background:var(--success-soft);color:var(--success);}
+  .badge.in{background:var(--success-soft);color:var(--success);}
+  .badge.out{background:var(--danger-soft);color:var(--danger);}
+  .badge.adj{background:var(--steel-soft);color:var(--steel);}
+  .qty{font-family:'IBM Plex Mono',monospace;font-weight:600;}
+  .row-actions{display:flex;gap:6px;justify-content:flex-end;}
+  .icon-btn{
+    border:1px solid var(--line);background:#fff;padding:6px 10px;border-radius:var(--radius);font-size:12px;color:var(--ink);
+  }
+  .icon-btn:hover{border-color:var(--ink);}
+  .icon-btn.danger:hover{border-color:var(--danger);color:var(--danger);}
+  .empty{padding:44px 20px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
+
+  /* item cards for "personal" search view */
+  .item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:14px;}
+  .item-card{background:var(--bg-panel);border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:10px;}
+  .item-card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .item-card .code{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
+  .item-card .name{font-size:15px;font-weight:600;margin-top:2px;}
+  .item-card .cat{font-size:11.5px;color:var(--ink-soft);}
+  .item-card .stockline{display:flex;align-items:baseline;gap:6px;margin-top:2px;}
+  .item-card .stockline .qty{font-size:19px;}
+
+  /* ---------- MODAL ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(20,22,26,0.55);
+    display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;
+  }
+  .modal{
+    background:#fff;border:1px solid var(--line);
+    width:100%;max-width:460px;max-height:90vh;overflow-y:auto;
+  }
+  .modal-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+  .modal-head h3{font-size:19px;}
+  .modal-close{background:none;border:none;font-size:20px;color:var(--ink-soft);line-height:1;padding:2px 4px;}
+  .modal-body{padding:18px 20px;}
+  .modal-foot{padding:14px 20px 18px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--line);}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;}
+  .item-ref{background:var(--bg);border:1px solid var(--line);padding:10px 12px;margin-bottom:14px;font-size:13px;}
+  .item-ref .loc-tag{margin-top:6px;}
+  .toast{
+    position:fixed;bottom:22px;right:22px;
+    background:var(--ink);color:#fff;padding:12px 18px;
+    border-radius:var(--radius);font-size:13px;z-index:60;
+    border-left:3px solid var(--accent);
+  }
+  .toast.err{border-left-color:var(--danger);}
+
+  @media (max-width: 820px){
+    .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);transition:transform .2s;z-index:40;}
+    .sidebar.open{transform:translateX(0);}
+    .stat-row{grid-template-columns:1fr 1fr;}
+    .content{padding:18px 16px 50px;}
+    .topbar{padding:16px;}
+    .grid-2{grid-template-columns:1fr;}
+    .mobile-menu-btn{display:inline-flex;}
+  }
+  .mobile-menu-btn{display:none;border:1px solid var(--line);background:#fff;padding:8px 10px;border-radius:var(--radius);}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var ROLES = {
+    admin: {label:"Administrador", desc:"Gestiona el inventario completo, ubicaciones y reportes."},
+    almacenista: {label:"Almacenista", desc:"Recibe mercancía y mantiene el stock actualizado."},
+    personal: {label:"Personal técnico", desc:"Consulta ubicaciones y retira repuestos e insumos."}
+  };
+
+  var STORAGE_ITEMS = "inv-items";
+  var STORAGE_MOVS = "inv-movimientos";
+  var STORAGE_CONFIG = "inv-config";
+  var DEFAULT_ALMACENISTA_PASSWORD = "bodega2024";
+  var DEFAULT_ADMIN_PASSWORD = "admin2024";
+
+  var state = {
+    booted:false,
+    user:null, // {name, role}
+    view:"dashboard",
+    items:[],
+    movs:[],
+    config:{almacenistaPassword: DEFAULT_ALMACENISTA_PASSWORD, adminPassword: DEFAULT_ADMIN_PASSWORD},
+    filterText:"",
+    filterCat:"todas",
+    modal:null, // {type:'item'|'entrada'|'salida'|'ajuste', payload}
+    toast:null,
+    sidebarOpen:false,
+    importSummary:null
+  };
+
+  function uid(prefix){ return prefix + "-" + Math.random().toString(36).slice(2,9); }
+  function nowStr(){
+    var d = new Date();
+    return d.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}) + " " +
+           d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+  }
+  function esc(s){
+    return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function seedItems(){
+    return [
+      {id:uid("it"),codigo:"ROD-6205",nombre:"Rodamiento 6205 ZZ",categoria:"Rodamientos",ubicacion:"Pasillo A · Estante 2 · Nivel 1",stock:42,unidad:"und",minimo:15},
+      {id:uid("it"),codigo:"FIL-AC01",nombre:"Filtro de aire industrial",categoria:"Filtros",ubicacion:"Pasillo A · Estante 4 · Nivel 3",stock:8,unidad:"und",minimo:10},
+      {id:uid("it"),codigo:"COR-B45",nombre:"Correa trapezoidal B45",categoria:"Correas y bandas",ubicacion:"Pasillo B · Estante 1 · Nivel 2",stock:20,unidad:"und",minimo:5},
+      {id:uid("it"),codigo:"GTE-NIT-M",nombre:"Guantes de nitrilo talla M",categoria:"Insumos EPP",ubicacion:"Pasillo C · Estante 5 · Nivel 1",stock:150,unidad:"par",minimo:50},
+      {id:uid("it"),codigo:"TOR-M8X40",nombre:"Tornillo hexagonal M8x40",categoria:"Tornillería",ubicacion:"Pasillo B · Estante 3 · Nivel 4",stock:500,unidad:"und",minimo:100},
+      {id:uid("it"),codigo:"LUB-GR2",nombre:"Grasa industrial EP2 (1kg)",categoria:"Lubricantes",ubicacion:"Pasillo D · Estante 1 · Nivel 1",stock:6,unidad:"kg",minimo:8},
+      {id:uid("it"),codigo:"MAN-HID12",nombre:"Manguera hidráulica 1/2\"",categoria:"Mangueras",ubicacion:"Pasillo D · Estante 2 · Nivel 2",stock:25,unidad:"m",minimo:10},
+      {id:uid("it"),codigo:"FUS-20A",nombre:"Fusible 20A tipo cuchilla",categoria:"Eléctricos",ubicacion:"Pasillo E · Estante 1 · Nivel 3",stock:60,unidad:"und",minimo:20},
+      {id:uid("it"),codigo:"VLV-SOL12",nombre:"Válvula solenoide 1/2\"",categoria:"Válvulas",ubicacion:"Pasillo E · Estante 4 · Nivel 1",stock:4,unidad:"und",minimo:5},
+      {id:uid("it"),codigo:"ARN-SEG",nombre:"Arnés de seguridad",categoria:"Insumos EPP",ubicacion:"Pasillo C · Estante 6 · Nivel 2",stock:12,unidad:"und",minimo:6}
+    ];
+  }
+
+  // ---------- persistence ----------
+  async function loadData(){
+    try{
+      var r = await window.storage.get(STORAGE_ITEMS, true);
+      state.items = r ? JSON.parse(r.value) : null;
+    }catch(e){ state.items = null; }
+    if(!state.items){
+      state.items = seedItems();
+      try{ await window.storage.set(STORAGE_ITEMS, JSON.stringify(state.items), true); }catch(e){}
+    }
+    try{
+      var r2 = await window.storage.get(STORAGE_MOVS, true);
+      state.movs = r2 ? JSON.parse(r2.value) : [];
+    }catch(e){ state.movs = []; }
+    try{
+      var r3 = await window.storage.get(STORAGE_CONFIG, true);
+      state.config = r3 ? JSON.parse(r3.value) : null;
+    }catch(e){ state.config = null; }
+    if(!state.config){
+      state.config = {almacenistaPassword: DEFAULT_ALMACENISTA_PASSWORD, adminPassword: DEFAULT_ADMIN_PASSWORD};
+      try{ await window.storage.set(STORAGE_CONFIG, JSON.stringify(state.config), true); }catch(e){}
+    }
+    if(!state.config.adminPassword){
+      state.config.adminPassword = DEFAULT_ADMIN_PASSWORD;
+      try{ await window.storage.set(STORAGE_CONFIG, JSON.stringify(state.config), true); }catch(e){}
+    }
+    state.booted = true;
+    render();
+  }
+  async function persistItems(){
+    try{ await window.storage.set(STORAGE_ITEMS, JSON.stringify(state.items), true); }
+    catch(e){ showToast("No se pudo guardar el inventario.", true); }
+  }
+  async function persistMovs(){
+    try{ await window.storage.set(STORAGE_MOVS, JSON.stringify(state.movs), true); }
+    catch(e){ showToast("No se pudo guardar el movimiento.", true); }
+  }
+  async function persistConfig(){
+    try{ await window.storage.set(STORAGE_CONFIG, JSON.stringify(state.config), true); }
+    catch(e){ showToast("No se pudo guardar la configuración.", true); }
+  }
+
+  function showToast(msg, isErr){
+    state.toast = {msg:msg, err:!!isErr};
+    render();
+    setTimeout(function(){ state.toast=null; render(); }, 2600);
+  }
+
+  // ---------- derived helpers ----------
+  function categorias(){
+    var set = {};
+    state.items.forEach(function(i){ set[i.categoria]=true; });
+    return Object.keys(set).sort();
+  }
+  function isLow(item){ return Number(item.stock) <= Number(item.minimo); }
+  function findItem(id){ return state.items.find(function(i){return i.id===id;}); }
+
+  // ---------- exportar a Excel ----------
+  function exportToExcel(rows, filename){
+    if(typeof XLSX==="undefined"){ showToast("No se pudo cargar el módulo de Excel.", true); return; }
+    if(!rows.length){ showToast("No hay datos para exportar.", true); return; }
+    var ws = XLSX.utils.json_to_sheet(rows);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Datos");
+    XLSX.writeFile(wb, filename);
+    showToast("Reporte exportado: " + filename);
+  }
+  function exportInventarioActual(){
+    var rows = filteredItems().map(function(i){
+      return {
+        "Código": i.codigo, "Nombre": i.nombre, "Categoría": i.categoria,
+        "Ubicación": i.ubicacion, "Stock": i.stock, "Unidad": i.unidad,
+        "Stock mínimo": i.minimo, "Estado": isLow(i)?"BAJO":"OK"
+      };
+    });
+    exportToExcel(rows, "inventario-almacen.xlsx");
+  }
+  function exportMovimientosActual(list, filename){
+    var typeLabel = {entrada:"Entrada", salida:"Salida", ajuste:"Ajuste"};
+    var rows = list.map(function(m){
+      return {
+        "Fecha": m.fecha, "Tipo": typeLabel[m.tipo]||m.tipo, "Código": m.itemCodigo,
+        "Ítem": m.itemNombre, "Cantidad": m.cantidad, "Motivo": m.motivo||"",
+        "Registrado por": m.usuario, "Rol": ROLES[m.rol]?ROLES[m.rol].label:m.rol
+      };
+    });
+    exportToExcel(rows, filename);
+  }
+
+  // ---------- importar Excel (datos del almacén anterior) ----------
+  function normKey(k){
+    return String(k).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+  }
+  var HEADER_MAP = {
+    "codigo":"codigo", "sku":"codigo", "cod":"codigo",
+    "nombre":"nombre", "item":"nombre", "descripcion":"nombre", "producto":"nombre", "articulo":"nombre",
+    "categoria":"categoria", "tipo":"categoria", "familia":"categoria",
+    "ubicacion":"ubicacion", "localizacion":"ubicacion", "ubicacion fisica":"ubicacion", "posicion":"ubicacion",
+    "stock":"stock", "cantidad":"stock", "existencia":"stock", "existencias":"stock", "stock actual":"stock",
+    "unidad":"unidad", "unidades":"unidad", "um":"unidad", "unidad de medida":"unidad",
+    "minimo":"minimo", "stock minimo":"minimo", "minimo stock":"minimo", "stock de seguridad":"minimo"
+  };
+  function importInventoryFromRows(rawRows){
+    var creados=0, actualizados=0, ignorados=0;
+    rawRows.forEach(function(row){
+      var mapped = {};
+      Object.keys(row).forEach(function(k){
+        var canon = HEADER_MAP[normKey(k)];
+        if(canon) mapped[canon] = row[k];
+      });
+      var nombre = mapped.nombre ? String(mapped.nombre).trim() : "";
+      if(!nombre){ ignorados++; return; }
+      var codigo = mapped.codigo ? String(mapped.codigo).trim() : uid("imp").toUpperCase();
+      var data = {
+        codigo: codigo,
+        nombre: nombre,
+        categoria: mapped.categoria ? String(mapped.categoria).trim() : "Importado",
+        ubicacion: mapped.ubicacion ? String(mapped.ubicacion).trim() : "Sin ubicación asignada",
+        stock: Number(mapped.stock)||0,
+        unidad: mapped.unidad ? String(mapped.unidad).trim() : "und",
+        minimo: Number(mapped.minimo)||0
+      };
+      var existing = state.items.find(function(i){ return i.codigo.toLowerCase()===data.codigo.toLowerCase(); });
+      if(existing){
+        Object.assign(existing, data, {id:existing.id});
+        actualizados++;
+      }else{
+        data.id = uid("it");
+        state.items.push(data);
+        creados++;
+      }
+    });
+    persistItems();
+    state.importSummary = "Importación completa: " + creados + " ítem(s) creados, " + actualizados + " actualizados" + (ignorados? (", " + ignorados + " fila(s) ignoradas por falta de nombre"):"") + ".";
+    showToast(state.importSummary);
+    renderContent();
+  }
+  function handleImportFile(file){
+    if(typeof XLSX==="undefined"){ showToast("No se pudo cargar el módulo de Excel.", true); return; }
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        var data = new Uint8Array(e.target.result);
+        var wb = XLSX.read(data, {type:"array"});
+        var sheet = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(sheet, {defval:""});
+        if(!rows.length){ showToast("El archivo no tiene filas de datos.", true); return; }
+        importInventoryFromRows(rows);
+      }catch(err){
+        showToast("No se pudo leer el archivo. Verifica que sea un Excel válido.", true);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function filteredItems(){
+    var t = state.filterText.trim().toLowerCase();
+    return state.items.filter(function(i){
+      var matchesText = !t || (i.nombre.toLowerCase().indexOf(t)>-1 || i.codigo.toLowerCase().indexOf(t)>-1 || i.ubicacion.toLowerCase().indexOf(t)>-1);
+      var matchesCat = state.filterCat==="todas" || i.categoria===state.filterCat;
+      return matchesText && matchesCat;
+    });
+  }
+
+  function addMov(mov){
+    mov.id = uid("mv");
+    mov.fecha = nowStr();
+    mov.usuario = state.user.name;
+    mov.rol = state.user.role;
+    state.movs.unshift(mov);
+    persistMovs();
+  }
+
+  // ---------- actions ----------
+  function login(name, role){
+    if(!name.trim()){ return; }
+    state.user = {name:name.trim(), role:role};
+    state.view = role==="personal" ? "buscar" : (role==="almacenista" ? "inventario" : "dashboard");
+    render();
+  }
+  function logout(){
+    state.user = null;
+    state.sidebarOpen=false;
+    render();
+  }
+  function setView(v){ state.view=v; state.sidebarOpen=false; render(); }
+
+  function openModal(type, payload){ state.modal = {type:type, payload:payload||{}}; render(); }
+  function closeModal(){ state.modal=null; render(); }
+
+  function saveItemForm(form, editingId){
+    var data = {
+      codigo: form.codigo.value.trim(),
+      nombre: form.nombre.value.trim(),
+      categoria: form.categoria.value.trim() || "General",
+      ubicacion: form.ubicacion.value.trim(),
+      stock: Number(form.stock.value)||0,
+      unidad: form.unidad.value.trim() || "und",
+      minimo: Number(form.minimo.value)||0
+    };
+    if(!data.codigo || !data.nombre || !data.ubicacion){
+      showToast("Completa código, nombre y ubicación.", true); return;
+    }
+    if(editingId){
+      var it = findItem(editingId);
+      Object.assign(it, data);
+      showToast("Ítem actualizado: " + data.nombre);
+    }else{
+      data.id = uid("it");
+      state.items.push(data);
+      showToast("Ítem creado: " + data.nombre);
+    }
+    persistItems();
+    closeModal();
+  }
+
+  function deleteItem(id){
+    var it = findItem(id);
+    if(!it) return;
+    if(!confirm("¿Eliminar \"" + it.nombre + "\" del inventario? Esta acción no se puede deshacer.")) return;
+    state.items = state.items.filter(function(i){return i.id!==id;});
+    persistItems();
+    showToast("Ítem eliminado.");
+    render();
+  }
+
+  function registrarEntrada(form, itemId){
+    var cant = Number(form.cantidad.value);
+    if(!cant || cant<=0){ showToast("Ingresa una cantidad válida.", true); return; }
+    var it = findItem(itemId);
+    it.stock = Number(it.stock) + cant;
+    persistItems();
+    addMov({tipo:"entrada", itemId:itemId, itemNombre:it.nombre, itemCodigo:it.codigo, cantidad:cant, motivo: form.motivo.value.trim() || "Recepción de mercancía"});
+    showToast("Entrada registrada: +" + cant + " " + it.unidad + " de " + it.nombre);
+    closeModal();
+  }
+
+  function registrarSalida(form, itemId){
+    var cant = Number(form.cantidad.value);
+    var it = findItem(itemId);
+    if(!cant || cant<=0){ showToast("Ingresa una cantidad válida.", true); return; }
+    if(cant > Number(it.stock)){ showToast("No hay suficiente stock disponible (" + it.stock + " " + it.unidad + ").", true); return; }
+    if(!form.motivo.value.trim()){ showToast("Indica el motivo o la orden de trabajo.", true); return; }
+    it.stock = Number(it.stock) - cant;
+    persistItems();
+    addMov({tipo:"salida", itemId:itemId, itemNombre:it.nombre, itemCodigo:it.codigo, cantidad:cant, motivo: form.motivo.value.trim()});
+    showToast("Salida registrada: -" + cant + " " + it.unidad + " de " + it.nombre);
+    closeModal();
+  }
+
+  function registrarAjuste(form, itemId){
+    var nuevo = Number(form.nuevoStock.value);
+    if(nuevo < 0 || isNaN(nuevo)){ showToast("Ingresa un stock válido.", true); return; }
+    var it = findItem(itemId);
+    var diff = nuevo - Number(it.stock);
+    it.stock = nuevo;
+    persistItems();
+    addMov({tipo:"ajuste", itemId:itemId, itemNombre:it.nombre, itemCodigo:it.codigo, cantidad:diff, motivo: form.motivo.value.trim() || "Ajuste manual de inventario"});
+    showToast("Stock ajustado a " + nuevo + " " + it.unidad + ".");
+    closeModal();
+  }
+
+  // ---------- render: login ----------
+  function renderLogin(){
+    var roleKeys = Object.keys(ROLES);
+    var selectedRole = state._loginRole || "personal";
+    var html = ''+
+    '<div class="login-wrap"><div class="login-card">'+
+      '<div class="login-eyebrow">CONTROL DE BODEGA</div>'+
+      '<h1>ALMACÉN<span style="color:var(--accent)">·</span>CTL</h1>'+
+      '<div class="login-sub">Identifícate para ver el inventario, ubicaciones y movimientos.</div>'+
+      '<div class="field"><label>Tu nombre</label><input id="loginName" type="text" placeholder="Ej. Laura Gómez" autofocus></div>'+
+      '<div class="field"><label>Rol</label>'+
+        '<div class="role-grid">'+
+          roleKeys.map(function(k){
+            return '<button type="button" class="role-opt'+(k===selectedRole?' active':'')+'" data-role="'+k+'">'+
+              '<strong>'+ROLES[k].label+'</strong><span>'+ROLES[k].desc+'</span></button>';
+          }).join('')+
+        '</div>'+
+      '</div>'+
+      (selectedRole==="almacenista" || selectedRole==="admin" ? '<div class="field"><label>Contraseña de '+ROLES[selectedRole].label.toLowerCase()+'</label><input id="loginPass" type="password" placeholder="••••••••"></div>' : '')+
+      '<div id="loginErr" class="error-msg" style="display:none;">Escribe tu nombre para continuar.</div>'+
+      '<button id="loginBtn" class="btn primary btn-full">Entrar al almacén</button>'+
+    '</div></div>';
+    document.getElementById("root").innerHTML = html;
+
+    document.querySelectorAll(".role-opt").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        state._loginRole = btn.getAttribute("data-role");
+        renderLogin();
+        document.getElementById("loginName").value = document.getElementById("loginName")._val || "";
+        document.getElementById("loginName").focus();
+      });
+    });
+    var nameInput = document.getElementById("loginName");
+    nameInput.addEventListener("input", function(){ nameInput._val = nameInput.value; });
+    if(nameInput._val) nameInput.value = nameInput._val;
+
+    var passInput = document.getElementById("loginPass");
+    if(passInput){
+      passInput.addEventListener("input", function(){ state._loginPassVal = passInput.value; });
+      if(state._loginPassVal) passInput.value = state._loginPassVal;
+    }
+
+    document.getElementById("loginBtn").addEventListener("click", function(){
+      var name = document.getElementById("loginName").value;
+      if(!name.trim()){ document.getElementById("loginErr").style.display="block"; return; }
+      if(selectedRole==="almacenista" || selectedRole==="admin"){
+        var pass = document.getElementById("loginPass").value;
+        var expected = selectedRole==="admin" ? state.config.adminPassword : state.config.almacenistaPassword;
+        if(pass !== expected){
+          var errEl = document.getElementById("loginErr");
+          errEl.textContent = "Contraseña incorrecta para el rol de " + ROLES[selectedRole].label.toLowerCase() + ".";
+          errEl.style.display = "block";
+          return;
+        }
+      }
+      state._loginPassVal = "";
+      login(name, selectedRole);
+    });
+    nameInput.addEventListener("keydown", function(e){ if(e.key==="Enter"){ document.getElementById("loginBtn").click(); } });
+    if(passInput) passInput.addEventListener("keydown", function(e){ if(e.key==="Enter"){ document.getElementById("loginBtn").click(); } });
+  }
+
+  // ---------- nav config per role ----------
+  function navFor(role){
+    if(role==="admin") return [
+      {id:"dashboard", label:"Resumen"},
+      {id:"inventario", label:"Inventario"},
+      {id:"movimientos", label:"Movimientos"},
+      {id:"config", label:"Configuración"}
+    ];
+    if(role==="almacenista") return [
+      {id:"inventario", label:"Inventario"},
+      {id:"movimientos", label:"Movimientos"}
+    ];
+    return [
+      {id:"buscar", label:"Ubicar repuestos"},
+      {id:"mis-salidas", label:"Mis salidas"}
+    ];
+  }
+
+  function viewTitle(v){
+    return {
+      dashboard:["Resumen del almacén","Estado general del inventario y alertas de stock."],
+      inventario:["Inventario","Consulta, registra entradas y mantiene el stock al día."],
+      movimientos:["Movimientos","Historial completo de entradas, salidas y ajustes."],
+      buscar:["Ubicar repuestos e insumos","Busca por nombre, código o ubicación y registra tu salida."],
+      "mis-salidas":["Mis salidas","Historial de lo que has retirado del almacén."],
+      config:["Configuración","Administra el acceso del rol de almacenista."]
+    }[v] || ["",""];
+  }
+
+  // ---------- render: shell ----------
+  function renderShell(){
+    var nav = navFor(state.user.role);
+    var title = viewTitle(state.view);
+    var html = ''+
+    '<div class="shell">'+
+      '<div class="sidebar'+(state.sidebarOpen?' open':'')+'">'+
+        '<div class="brand"><div class="display">ALMACÉN<span>·</span>CTL</div><div class="brand-sub">CONTROL DE INVENTARIO</div></div>'+
+        '<div class="nav">'+
+          nav.map(function(n){
+            return '<button type="button" class="nav-item'+(state.view===n.id?' active':'')+'" data-view="'+n.id+'"><span class="dot"></span>'+n.label+'</button>';
+          }).join('')+
+        '</div>'+
+        '<div class="side-foot">'+
+          '<div class="side-user">'+esc(state.user.name)+'</div>'+
+          '<div class="side-role">'+ROLES[state.user.role].label.toUpperCase()+'</div>'+
+          '<button id="logoutBtn" class="side-logout">Cerrar sesión</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="main">'+
+        '<div class="topbar">'+
+          '<div><button class="mobile-menu-btn" id="menuBtn">☰</button><h2>'+title[0]+'</h2><div class="sub">'+title[1]+'</div></div>'+
+          topbarAction()+
+        '</div>'+
+        '<div class="content" id="contentArea"></div>'+
+      '</div>'+
+    '</div>';
+    document.getElementById("root").innerHTML = html;
+
+    document.getElementById("menuBtn").addEventListener("click", function(){ state.sidebarOpen=!state.sidebarOpen; render(); });
+    document.getElementById("logoutBtn").addEventListener("click", logout);
+    document.querySelectorAll(".nav-item").forEach(function(btn){
+      btn.addEventListener("click", function(){ setView(btn.getAttribute("data-view")); });
+    });
+
+    var actionBtn = document.getElementById("topAction");
+    if(actionBtn){
+      actionBtn.addEventListener("click", function(){
+        if(state.view==="inventario") openModal("item", {});
+      });
+    }
+
+    renderContent();
+    renderModal();
+    renderToast();
+  }
+
+  function topbarAction(){
+    if(state.view==="inventario" && state.user.role==="admin"){
+      return '<button id="topAction" class="btn primary">+ Nuevo ítem</button>';
+    }
+    return '';
+  }
+
+  function renderContent(){
+    var el = document.getElementById("contentArea");
+    if(state.view==="dashboard") return renderDashboard(el);
+    if(state.view==="inventario") return renderInventario(el);
+    if(state.view==="movimientos") return renderMovimientos(el, null);
+    if(state.view==="buscar") return renderBuscar(el);
+    if(state.view==="mis-salidas") return renderMovimientos(el, state.user.name);
+    if(state.view==="config") return renderConfig(el);
+  }
+
+  // ---------- CONFIGURACIÓN (admin) ----------
+  function renderConfig(el){
+    el.innerHTML = ''+
+    '<div class="panel" style="max-width:420px;">'+
+      '<div class="panel-head"><h3>Acceso de administrador</h3></div>'+
+      '<div style="padding:18px;">'+
+        '<div class="help-text" style="margin-bottom:14px;">Quien entre como Administrador debe escribir esta contraseña en el inicio de sesión.</div>'+
+        '<form id="adminPassForm">'+
+          field("nuevaPass","Nueva contraseña","text","","Ej. admin2025")+
+        '</form>'+
+        '<button id="saveAdminPassBtn" class="btn primary btn-full">Guardar contraseña</button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="panel" style="max-width:420px;">'+
+      '<div class="panel-head"><h3>Acceso de almacenista</h3></div>'+
+      '<div style="padding:18px;">'+
+        '<div class="help-text" style="margin-bottom:14px;">Quien entre como Almacenista debe escribir esta contraseña en el inicio de sesión.</div>'+
+        '<form id="passForm">'+
+          field("nuevaPass","Nueva contraseña","text","","Ej. bodega2025")+
+        '</form>'+
+        '<button id="savePassBtn" class="btn primary btn-full">Guardar contraseña</button>'+
+      '</div>'+
+    '</div>';
+    document.getElementById("saveAdminPassBtn").addEventListener("click", function(){
+      var val = document.getElementById("adminPassForm").nuevaPass.value.trim();
+      if(!val){ showToast("Escribe una contraseña.", true); return; }
+      state.config.adminPassword = val;
+      persistConfig();
+      showToast("Contraseña de administrador actualizada.");
+    });
+    document.getElementById("savePassBtn").addEventListener("click", function(){
+      var val = document.getElementById("passForm").nuevaPass.value.trim();
+      if(!val){ showToast("Escribe una contraseña.", true); return; }
+      state.config.almacenistaPassword = val;
+      persistConfig();
+      showToast("Contraseña de almacenista actualizada.");
+    });
+  }
+
+  // ---------- DASHBOARD (admin) ----------
+  function renderDashboard(el){
+    var total = state.items.length;
+    var totalUnidades = state.items.reduce(function(s,i){return s+Number(i.stock);},0);
+    var lowItems = state.items.filter(isLow);
+    var today = nowStr().split(" ")[0];
+    var movsHoy = state.movs.filter(function(m){ return m.fecha.split(" ")[0]===today; }).length;
+
+    var html = ''+
+    '<div class="stat-row">'+
+      statCard(total, "SKU en inventario") +
+      statCard(totalUnidades.toLocaleString('es-CO'), "Unidades totales") +
+      statCard(lowItems.length, "Ítems con stock bajo", lowItems.length>0) +
+      statCard(movsHoy, "Movimientos hoy") +
+    '</div>'+
+    '<div class="panel">'+
+      '<div class="panel-head"><h3>Alertas de stock bajo</h3></div>'+
+      (lowItems.length ? renderTable(lowItems, true) : '<div class="empty">No hay ítems por debajo del mínimo. Buen trabajo.</div>')+
+    '</div>'+
+    '<div class="panel">'+
+      '<div class="panel-head"><h3>Últimos movimientos</h3><button type="button" class="icon-btn" id="verTodos">Ver todos →</button></div>'+
+      renderMovTable(state.movs.slice(0,8))+
+    '</div>';
+    el.innerHTML = html;
+    var vt = document.getElementById("verTodos");
+    if(vt) vt.addEventListener("click", function(){ setView("movimientos"); });
+    bindTableActions();
+  }
+  function statCard(num, lbl, warn){
+    return '<div class="stat-card'+(warn?' warn':'')+'"><div class="num">'+num+'</div><div class="lbl">'+lbl+'</div></div>';
+  }
+
+  // ---------- INVENTARIO (admin + almacenista) ----------
+  function renderInventario(el){
+    var list = filteredItems();
+    var cats = categorias();
+    var isAdmin = state.user.role==="admin";
+    var html = ''+
+    '<div class="panel">'+
+      '<div class="toolbar">'+
+        '<input type="text" id="searchInput" placeholder="Buscar por nombre, código o ubicación…" value="'+esc(state.filterText)+'">'+
+        '<select id="catSelect">'+
+          '<option value="todas">Todas las categorías</option>'+
+          cats.map(function(c){return '<option value="'+esc(c)+'"'+(state.filterCat===c?' selected':'')+'>'+esc(c)+'</option>';}).join('')+
+        '</select>'+
+        '<div class="toolbar-actions">'+
+          '<button type="button" class="icon-btn" id="exportInvBtn">⬇ Exportar Excel</button>'+
+          (isAdmin ? '<button type="button" class="icon-btn" id="importInvBtn">⬆ Importar Excel</button><input type="file" id="importInvFile" accept=".xlsx,.xls,.csv" style="display:none;">' : '')+
+        '</div>'+
+      '</div>'+
+      (state.importSummary ? '<div class="import-summary">'+esc(state.importSummary)+'</div>' : '')+
+      (list.length ? renderTable(list, false) : '<div class="empty">No se encontraron ítems con ese filtro.</div>')+
+    '</div>';
+    el.innerHTML = html;
+
+    document.getElementById("searchInput").addEventListener("input", function(e){
+      state.filterText = e.target.value; renderContent();
+      document.getElementById("searchInput").focus();
+      var v = document.getElementById("searchInput").value;
+      document.getElementById("searchInput").value=v;
+      document.getElementById("searchInput").setSelectionRange(v.length, v.length);
+    });
+    document.getElementById("catSelect").addEventListener("change", function(e){
+      state.filterCat = e.target.value; renderContent();
+    });
+    document.getElementById("exportInvBtn").addEventListener("click", exportInventarioActual);
+    var importBtn = document.getElementById("importInvBtn");
+    if(importBtn){
+      var fileInput = document.getElementById("importInvFile");
+      importBtn.addEventListener("click", function(){ fileInput.click(); });
+      fileInput.addEventListener("change", function(e){
+        if(e.target.files && e.target.files[0]){ handleImportFile(e.target.files[0]); }
+        fileInput.value = "";
+      });
+    }
+    bindTableActions();
+  }
+
+  function renderTable(list, alertMode){
+    var canEdit = state.user.role==="admin";
+    var canEntrada = state.user.role==="admin" || state.user.role==="almacenista";
+    var rows = list.map(function(i){
+      var low = isLow(i);
+      return '<tr>'+
+        '<td class="mono">'+esc(i.codigo)+'</td>'+
+        '<td><strong>'+esc(i.nombre)+'</strong><div style="color:var(--ink-soft);font-size:11.5px;">'+esc(i.categoria)+'</div></td>'+
+        '<td><span class="loc-tag">'+esc(i.ubicacion)+'</span></td>'+
+        '<td class="qty">'+i.stock+' <span style="color:var(--ink-soft);font-weight:400;">'+esc(i.unidad)+'</span></td>'+
+        '<td>'+(low?'<span class="badge low">BAJO · mín '+i.minimo+'</span>':'<span class="badge ok">OK</span>')+'</td>'+
+        '<td><div class="row-actions">'+
+          (canEntrada?'<button type="button" class="icon-btn" data-act="entrada" data-id="'+i.id+'">+ Entrada</button>':'')+
+          (canEdit?'<button type="button" class="icon-btn" data-act="ajuste" data-id="'+i.id+'">Ajustar</button>':'')+
+          (canEdit?'<button type="button" class="icon-btn" data-act="editar" data-id="'+i.id+'">Editar</button>':'')+
+          (canEdit?'<button type="button" class="icon-btn danger" data-act="eliminar" data-id="'+i.id+'">Eliminar</button>':'')+
+        '</div></td>'+
+      '</tr>';
+    }).join('');
+    return '<table><thead><tr><th>Código</th><th>Ítem</th><th>Ubicación</th><th>Stock</th><th>Estado</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+  }
+
+  function bindTableActions(){
+    document.querySelectorAll("[data-act]").forEach(function(btn){
+      var id = btn.getAttribute("data-id");
+      var act = btn.getAttribute("data-act");
+      btn.addEventListener("click", function(){
+        if(act==="entrada") openModal("entrada", {itemId:id});
+        if(act==="ajuste") openModal("ajuste", {itemId:id});
+        if(act==="editar") openModal("item", {itemId:id});
+        if(act==="eliminar") deleteItem(id);
+        if(act==="salida") openModal("salida", {itemId:id});
+      });
+    });
+  }
+
+  // ---------- MOVIMIENTOS ----------
+  function renderMovimientos(el, onlyUser){
+    var list = onlyUser ? state.movs.filter(function(m){return m.usuario===onlyUser;}) : state.movs;
+    var filename = onlyUser ? "mis-salidas.xlsx" : "movimientos-almacen.xlsx";
+    el.innerHTML = '<div class="panel"><div class="panel-head"><h3>'+(onlyUser? "Tus movimientos registrados":"Todos los movimientos")+'</h3>'+
+      '<button type="button" class="icon-btn" id="exportMovBtn">⬇ Exportar Excel</button></div>'+
+      (list.length? renderMovTable(list) : '<div class="empty">'+(onlyUser?"Aún no has registrado salidas.":"Todavía no hay movimientos registrados.")+'</div>')+
+      '</div>';
+    document.getElementById("exportMovBtn").addEventListener("click", function(){ exportMovimientosActual(list, filename); });
+  }
+  function renderMovTable(list){
+    var typeLabel = {entrada:"Entrada", salida:"Salida", ajuste:"Ajuste"};
+    var typeBadge = {entrada:"in", salida:"out", ajuste:"adj"};
+    var rows = list.map(function(m){
+      return '<tr>'+
+        '<td class="mono" style="white-space:nowrap;color:var(--ink-soft);">'+m.fecha+'</td>'+
+        '<td><span class="badge '+typeBadge[m.tipo]+'">'+typeLabel[m.tipo]+'</span></td>'+
+        '<td><strong>'+esc(m.itemNombre)+'</strong><div class="mono" style="font-size:11px;color:var(--ink-soft);">'+esc(m.itemCodigo)+'</div></td>'+
+        '<td class="qty">'+(m.tipo==="salida"?"-":m.tipo==="entrada"?"+":(m.cantidad>=0?"+":""))+m.cantidad+'</td>'+
+        '<td>'+esc(m.motivo||"—")+'</td>'+
+        '<td>'+esc(m.usuario)+'</td>'+
+      '</tr>';
+    }).join('');
+    return '<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Ítem</th><th>Cant.</th><th>Motivo</th><th>Registrado por</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  }
+
+  // ---------- BUSCAR (personal) ----------
+  function renderBuscar(el){
+    var list = filteredItems();
+    var cats = categorias();
+    var html = ''+
+    '<div class="panel">'+
+      '<div class="toolbar">'+
+        '<input type="text" id="searchInput" placeholder="Buscar repuesto, insumo, código o ubicación…" value="'+esc(state.filterText)+'">'+
+        '<select id="catSelect">'+
+          '<option value="todas">Todas las categorías</option>'+
+          cats.map(function(c){return '<option value="'+esc(c)+'"'+(state.filterCat===c?' selected':'')+'>'+esc(c)+'</option>';}).join('')+
+        '</select>'+
+      '</div>'+
+      '<div style="padding:16px;">'+
+        (list.length ? '<div class="item-grid">'+list.map(itemCard).join('')+'</div>' : '<div class="empty">No se encontraron resultados. Intenta con otro término.</div>')+
+      '</div>'+
+    '</div>';
+    el.innerHTML = html;
+    document.getElementById("searchInput").addEventListener("input", function(e){
+      var pos = e.target.selectionStart;
+      state.filterText = e.target.value; renderContent();
+      var ni = document.getElementById("searchInput");
+      ni.focus(); ni.setSelectionRange(pos,pos);
+    });
+    document.getElementById("catSelect").addEventListener("change", function(e){
+      state.filterCat = e.target.value; renderContent();
+    });
+    bindTableActions();
+  }
+  function itemCard(i){
+    var low = isLow(i);
+    return '<div class="item-card">'+
+      '<div class="top"><div><div class="code">'+esc(i.codigo)+'</div><div class="name">'+esc(i.nombre)+'</div><div class="cat">'+esc(i.categoria)+'</div></div>'+
+      (low?'<span class="badge low">BAJO</span>':'')+
+      '</div>'+
+      '<span class="loc-tag" style="align-self:flex-start;">'+esc(i.ubicacion)+'</span>'+
+      '<div class="stockline"><span class="qty">'+i.stock+'</span><span style="color:var(--ink-soft);font-size:12px;">'+esc(i.unidad)+' disponibles</span></div>'+
+      '<button type="button" class="btn primary" data-act="salida" data-id="'+i.id+'" style="margin-top:2px;">Registrar salida</button>'+
+    '</div>';
+  }
+
+  // ---------- MODALS ----------
+  function renderModal(){
+    var host = document.getElementById("modalHost");
+    if(host) host.remove();
+    if(!state.modal) return;
+    var div = document.createElement("div");
+    div.id = "modalHost";
+    document.body.appendChild(div);
+
+    var m = state.modal;
+    if(m.type==="item") return renderItemModal(div, m.payload);
+    if(m.type==="entrada") return renderEntradaModal(div, m.payload);
+    if(m.type==="salida") return renderSalidaModal(div, m.payload);
+    if(m.type==="ajuste") return renderAjusteModal(div, m.payload);
+  }
+
+  function modalShell(div, title, bodyHtml, footHtml){
+    div.innerHTML = '<div class="overlay" id="overlayBg"><div class="modal">'+
+      '<div class="modal-head"><h3>'+title+'</h3><button class="modal-close" id="modalCloseBtn">×</button></div>'+
+      '<div class="modal-body">'+bodyHtml+'</div>'+
+      '<div class="modal-foot">'+footHtml+'</div>'+
+    '</div></div>';
+    document.getElementById("modalCloseBtn").addEventListener("click", closeModal);
+    document.getElementById("overlayBg").addEventListener("click", function(e){ if(e.target.id==="overlayBg") closeModal(); });
+  }
+
+  function renderItemModal(div, payload){
+    var editing = payload.itemId ? findItem(payload.itemId) : null;
+    var body = ''+
+      '<form id="itemForm">'+
+      '<div class="grid-2">'+
+        field("codigo","Código","text", editing?editing.codigo:"", "EJ-0012")+
+        field("unidad","Unidad","text", editing?editing.unidad:"und", "und / kg / m")+
+      '</div>'+
+      field("nombre","Nombre","text", editing?editing.nombre:"", "Ej. Filtro de aceite")+
+      '<div class="grid-2">'+
+        field("categoria","Categoría","text", editing?editing.categoria:"", "Ej. Filtros")+
+        field("stock","Stock actual","number", editing?editing.stock:0)+
+      '</div>'+
+      '<div class="grid-2">'+
+        field("minimo","Stock mínimo","number", editing?editing.minimo:0)+
+        field("ubicacion","Ubicación","text", editing?editing.ubicacion:"", "Pasillo · Estante · Nivel")+
+      '</div>'+
+      '</form>';
+    var foot = '<button class="btn ghost" id="cancelBtn">Cancelar</button><button class="btn primary" id="saveBtn">'+(editing?"Guardar cambios":"Crear ítem")+'</button>';
+    modalShell(div, editing?"Editar ítem":"Nuevo ítem", body, foot);
+    document.getElementById("cancelBtn").addEventListener("click", closeModal);
+    document.getElementById("saveBtn").addEventListener("click", function(){
+      saveItemForm(document.getElementById("itemForm"), editing?editing.id:null);
+    });
+  }
+
+  function itemRefBlock(it){
+    return '<div class="item-ref"><strong>'+esc(it.nombre)+'</strong> <span class="mono" style="color:var(--ink-soft);">('+esc(it.codigo)+')</span>'+
+      '<div class="loc-tag" style="display:inline-block;">'+esc(it.ubicacion)+'</div>'+
+      '<div style="margin-top:6px;color:var(--ink-soft);">Stock actual: <strong class="qty">'+it.stock+' '+esc(it.unidad)+'</strong></div></div>';
+  }
+
+  function renderEntradaModal(div, payload){
+    var it = findItem(payload.itemId);
+    var body = itemRefBlock(it) + '<form id="movForm">'+
+      field("cantidad","Cantidad que ingresa","number","", "Ej. 20")+
+      field("motivo","Motivo / proveedor","text","", "Ej. Compra a Proveedor XYZ")+
+      '</form>';
+    var foot = '<button class="btn ghost" id="cancelBtn">Cancelar</button><button class="btn steel" id="saveBtn">Registrar entrada</button>';
+    modalShell(div, "Registrar entrada de stock", body, foot);
+    document.getElementById("cancelBtn").addEventListener("click", closeModal);
+    document.getElementById("saveBtn").addEventListener("click", function(){ registrarEntrada(document.getElementById("movForm"), it.id); });
+  }
+
+  function renderSalidaModal(div, payload){
+    var it = findItem(payload.itemId);
+    var body = itemRefBlock(it) + '<form id="movForm">'+
+      field("cantidad","Cantidad que necesitas","number","", "Ej. 2")+
+      field("motivo","Motivo / orden de trabajo","text","", "Ej. Mantenimiento máquina 4")+
+      '</form>';
+    var foot = '<button class="btn ghost" id="cancelBtn">Cancelar</button><button class="btn primary" id="saveBtn">Registrar salida</button>';
+    modalShell(div, "Registrar salida", body, foot);
+    document.getElementById("cancelBtn").addEventListener("click", closeModal);
+    document.getElementById("saveBtn").addEventListener("click", function(){ registrarSalida(document.getElementById("movForm"), it.id); });
+  }
+
+  function renderAjusteModal(div, payload){
+    var it = findItem(payload.itemId);
+    var body = itemRefBlock(it) + '<form id="movForm">'+
+      field("nuevoStock","Nuevo stock real","number", it.stock)+
+      field("motivo","Motivo del ajuste","text","", "Ej. Conteo físico mensual")+
+      '</form>';
+    var foot = '<button class="btn ghost" id="cancelBtn">Cancelar</button><button class="btn steel" id="saveBtn">Guardar ajuste</button>';
+    modalShell(div, "Ajustar stock", body, foot);
+    document.getElementById("cancelBtn").addEventListener("click", closeModal);
+    document.getElementById("saveBtn").addEventListener("click", function(){ registrarAjuste(document.getElementById("movForm"), it.id); });
+  }
+
+  function field(name,label,type,value,placeholder){
+    return '<div class="field"><label>'+label+'</label><input name="'+name+'" type="'+type+'" value="'+esc(value)+'" placeholder="'+esc(placeholder||"")+'"'+(type==='number'?' min="0"':'')+'></div>';
+  }
+
+  function renderToast(){
+    var host = document.getElementById("toastHost");
+    if(host) host.remove();
+    if(!state.toast) return;
+    var div = document.createElement("div");
+    div.id = "toastHost";
+    div.className = "toast" + (state.toast.err ? " err" : "");
+    div.textContent = state.toast.msg;
+    document.body.appendChild(div);
+  }
+
+  // ---------- master render ----------
+  function render(){
+    if(!state.booted){
+      document.getElementById("root").innerHTML = '<div class="login-wrap"><div style="color:#fff;font-family:IBM Plex Mono,monospace;font-size:12px;letter-spacing:0.08em;">CARGANDO ALMACÉN…</div></div>';
+      return;
+    }
+    if(!state.user){ renderLogin(); return; }
+    renderShell();
+  }
+
+  loadData();
+})();
+</script>
+</body>
+</html>
